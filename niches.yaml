@@ -1,0 +1,65 @@
+# Wordlist de nichos. Editável sem tocar no código — nichos saturam e mudam
+# rápido (principalmente "ia_generativa"), então mantenha isso separado do
+# pipeline e revise periodicamente.
+
+niche_groups:
+  ia_generativa:
+    - "carta para pessoa amada com IA"
+    - "música personalizada com IA"
+    - "poema de amor com IA"
+    - "retrato envelhecido com IA"
+    - "foto profissional com IA"
+    - "avatar 3D com IA"
+    - "voz clonada com IA"
+    - "vídeo de aniversário com IA"
+    - "desenho animado do seu filho IA"
+    - "transformar foto em pintura IA"
+
+  espiritualidade:
+    - "teste de alma gêmea"
+    - "mapa astral grátis"
+    - "tarot online"
+    - "numerologia do nome"
+    - "horóscopo personalizado"
+    - "anjo da guarda descubra o seu"
+    - "runas online"
+    - "previsão do ano"
+    - "teste de personalidade espiritual"
+    - "leitura de mão grátis"
+
+  quizzes:
+    - "teste de QI"
+    - "teste de personalidade"
+    - "qual seu arquétipo"
+    - "teste de idade mental"
+    - "teste emocional"
+    - "descubra seu propósito"
+    - "teste de compatibilidade"
+    - "qual super-herói você é"
+    - "teste de inteligência emocional"
+
+  renda_extra:
+    - "renda extra em casa"
+    - "como ganhar dinheiro pelo celular"
+    - "método de renda online"
+    - "trabalhe de casa sem investir"
+    - "dinheiro extra todo mês"
+    - "segundo salário online"
+
+  emagrecimento:
+    - "emagrecer rápido"
+    - "chá para emagrecer"
+    - "método de emagrecimento"
+    - "perder barriga em 30 dias"
+
+  relacionamento:
+    - "como reconquistar seu ex"
+    - "como saber se ele te ama"
+    - "sinais que ele esconde algo"
+    - "teste se seu relacionamento vai durar"
+
+  infoproduto:
+    - "curso de marketing digital"
+    - "como vender pela internet"
+    - "mentoria de vendas"
+    - "método passo a passo online"
