@@ -7,6 +7,7 @@ Ter as duas tabelas separadas resolve dois problemas do pipeline original:
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -98,17 +99,77 @@ class Storage:
         creative_video_url: Optional[str] = None,
         snapshot_url: Optional[str] = None,
     ) -> None:
+        """Persiste o dado bruto. Se o ad já existir, atualiza tudo (UPSERT).
+
+        IMPORTANTE: usamos `ON CONFLICT ... DO UPDATE` (e não INSERT OR IGNORE)
+        para que linhas coletadas numa versão antiga do pipeline — antes de
+        extrair criativos — sejam preenchidas quando o mesmo anúncio for
+        coletado de novo. Com INSERT OR IGNORE, os campos de criativo ficavam
+        NULL para sempre.
+        """
         with self._connect() as conn:
             conn.execute(
-                """INSERT OR IGNORE INTO raw_ads
+                """INSERT INTO raw_ads
                    (ad_id, niche, page_name, page_id, delivery_start, impressions_lower,
                     raw_json, creative_body, creative_image_url, creative_video_url, snapshot_url)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(ad_id) DO UPDATE SET
+                     niche = excluded.niche,
+                     page_name = excluded.page_name,
+                     page_id = excluded.page_id,
+                     delivery_start = excluded.delivery_start,
+                     impressions_lower = excluded.impressions_lower,
+                     raw_json = excluded.raw_json,
+                     creative_body = excluded.creative_body,
+                     creative_image_url = excluded.creative_image_url,
+                     creative_video_url = excluded.creative_video_url,
+                     snapshot_url = excluded.snapshot_url
+                   """,
                 (
                     ad_id, niche, page_name, page_id, delivery_start, impressions_lower,
                     raw_json, creative_body, creative_image_url, creative_video_url, snapshot_url,
                 ),
             )
+
+    def backfill_creatives(self) -> int:
+        """Reextrai os criativos (vídeo/imagem/body/snapshot) a partir do raw_json.
+
+        Corrige linhas coletadas antes da extração de criativo existir: o
+        raw_json guarda o payload completo da Ad Library, então conseguimos
+        reprocessá-lo agora e gravar as URLs na tabela sem re-coletar.
+        Retorna quantas linhas foram atualizadas.
+        """
+        from .creative import CreativeExtractor
+        from meta_ads_collector.models import Ad
+
+        updated = 0
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT ad_id, raw_json FROM raw_ads"
+            ).fetchall()
+            for row in rows:
+                try:
+                    ad = Ad.from_graphql_response(json.loads(row["raw_json"]))
+                    info = CreativeExtractor.extract(ad)
+                except Exception:
+                    continue
+                cur = conn.execute(
+                    """UPDATE raw_ads SET
+                         creative_body = ?,
+                         creative_image_url = ?,
+                         creative_video_url = ?,
+                         snapshot_url = ?
+                       WHERE ad_id = ?""",
+                    (
+                        info.body,
+                        info.image_url,
+                        info.video_url,
+                        info.snapshot_url,
+                        row["ad_id"],
+                    ),
+                )
+                updated += cur.rowcount
+        return updated
 
     def save_scored(self, scored: ScoredAd) -> None:
         with self._connect() as conn:

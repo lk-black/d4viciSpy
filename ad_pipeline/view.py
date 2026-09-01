@@ -35,12 +35,12 @@ _TEMPLATE = """<!DOCTYPE html>
     background: #1a1a1d; border-radius: 14px; overflow: hidden;
     border: 1px solid #2a2a2e; display: flex; flex-direction: column;
   }}
-  .media {{ background: #000; }}
+  .media {{ background: #000; aspect-ratio: 4 / 3; }}
   .media video, .media img {{
-    width: 100%; display: block; max-height: 340px; object-fit: contain; background: #000;
+    width: 100%; height: 100%; display: block; object-fit: contain; background: #000;
   }}
   .no-media {{
-    height: 160px; display: flex; align-items: center; justify-content: center;
+    height: 100%; display: flex; align-items: center; justify-content: center;
     color: #555; font-size: 13px;
   }}
   .info {{ padding: 14px 16px; flex: 1; display: flex; flex-direction: column; }}
@@ -95,6 +95,9 @@ class HtmlReportGenerator:
         limit: int = 50,
         output_path: str = "report.html",
     ) -> str:
+        # Garante que criativos existam antes de gerar o relatório —
+        # reextrai do raw_json se necessário.
+        self.storage.backfill_creatives()
         rows = self.storage.top_scored(niche=niche, limit=limit)
         cards_html = "\n".join(self._render_card(row) for row in rows)
         html = _TEMPLATE.format(cards=cards_html, count=len(rows), niche=escape(niche or "todos"))
@@ -111,9 +114,18 @@ class HtmlReportGenerator:
         image_url = row["creative_image_url"]
 
         if video_url:
-            media = f'<video controls preload="metadata" src="{escape(video_url)}"></video>'
+            poster = escape(image_url) if image_url else ""
+            poster_attr = f' poster="{poster}"' if poster else ""
+            media = (
+                f'<video controls preload="metadata" {poster_attr}'
+                f' onerror="this.outerHTML=\'<div class=no-media>vídeo indisponível</div>\'">'
+                f'<source src="{escape(video_url)}"></video>'
+            )
         elif image_url:
-            media = f'<img src="{escape(image_url)}" alt="criativo do anúncio" loading="lazy">'
+            media = (
+                f'<img src="{escape(image_url)}" alt="criativo do anúncio" loading="lazy" '
+                f'onerror="this.outerHTML=\'<div class=no-media>imagem indisponível</div>\'">'
+            )
         else:
             media = '<div class="no-media">sem criativo capturado</div>'
 
